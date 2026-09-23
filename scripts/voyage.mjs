@@ -1,6 +1,5 @@
 // 스크립트 공용 Voyage 임베딩 호출
-export const EMBEDDING_MODEL = "voyage-3.5";
-export const EMBEDDING_DIM = 1024;
+import { EMBEDDING_MODEL } from "../lib/search/config.ts";
 
 const BATCH_SIZE = 128;
 
