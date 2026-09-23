@@ -171,7 +171,7 @@ export function Translator() {
 
         <div aria-live="polite" aria-busy={isLoading}>
           {state.kind === "success" ? (
-            <PromptPanel key={searchId} chunks={state.data.chunks} selection={selection} />
+            <PromptPanel key={searchId} query={state.data.query} chunks={state.data.chunks} selection={selection} />
           ) : (
             <Panel label="프롬프트">
               <StatusArea state={state} onExample={runExample} onRetry={() => void translate(text)} />

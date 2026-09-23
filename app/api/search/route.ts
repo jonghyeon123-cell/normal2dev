@@ -11,7 +11,7 @@ import {
 } from "@/lib/search/config";
 import { splitPhrases } from "@/lib/search/split";
 import type { ApiError, ChunkResult, ChunkStatus, MatchKind, SearchResponse, Term } from "@/lib/search/types";
-import { checkRateLimit } from "@/lib/server/rate-limit";
+import { clientIp, createRateLimiter } from "@/lib/server/rate-limit";
 import { supabaseAdmin } from "@/lib/server/supabase";
 import { createTtlCache } from "@/lib/server/ttl-cache";
 import { embedQueries, rerank } from "@/lib/server/voyage";
@@ -28,6 +28,9 @@ type Match = { term_id: string; similarity: number; matched_content: string; mat
 
 const TERM_COLUMNS =
   "id, term, term_en, category, subcategory, definition, analogy, prompt_phrase, prompt_points, related, confusable";
+
+// IP 당 1분에 20회
+const checkRateLimit = createRateLimiter(20);
 
 // 같은 조각은 1시간 동안 다시 계산하지 않는다 (Voyage 크레딧 절약).
 const chunkCache = createTtlCache<ChunkResult>(1000, 60 * 60 * 1000);
@@ -77,7 +80,8 @@ async function searchChunks(texts: string[]): Promise<ChunkResult[]> {
 
   const termById = new Map((termsRes.data as Term[]).map((t) => [t.id, t]));
   const aliasesById = new Map<string, string[]>();
-  for (const row of aliasesRes.data) aliasesById.set(row.term_id, [...(aliasesById.get(row.term_id) ?? []), row.content]);
+  for (const row of aliasesRes.data)
+    aliasesById.set(row.term_id, [...(aliasesById.get(row.term_id) ?? []), row.content]);
 
   return Promise.all(
     texts.map(async (text, i): Promise<ChunkResult> => {
@@ -115,8 +119,7 @@ async function searchChunks(texts: string[]): Promise<ChunkResult[]> {
 }
 
 export async function POST(request: NextRequest) {
-  const ip = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "local";
-  const limit = checkRateLimit(ip);
+  const limit = checkRateLimit(clientIp(request));
   if (!limit.ok) {
     return errorResponse(429, "RATE_LIMITED", "요청이 너무 많아요. 잠시 후 다시 시도해 주세요.", {
       "Retry-After": String(limit.retryAfterSeconds),
