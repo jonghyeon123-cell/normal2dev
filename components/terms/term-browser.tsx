@@ -1,6 +1,6 @@
 "use client";
 
-import { Search, Star, X } from "lucide-react";
+import { ArrowUp, Search, Star, X } from "lucide-react";
 import Link from "next/link";
 import { useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
 import { CategoryLabel, TermEn } from "@/components/n2d/parts";
@@ -82,6 +82,11 @@ export function TermBrowser({ terms }: { terms: TermListItem[] }) {
     };
   }, [groups]);
 
+  function scrollToTop() {
+    const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    window.scrollTo({ top: 0, behavior: reduceMotion ? "auto" : "smooth" });
+  }
+
   // 좁은 화면에서 강조된 글자가 색인 밖으로 숨지 않게 색인을 옆으로 민다.
   const indexRef = useRef<HTMLElement>(null);
   useEffect(() => {
@@ -155,29 +160,39 @@ export function TermBrowser({ terms }: { terms: TermListItem[] }) {
         {filtered.length}개의 용어
       </p>
 
-      {/* 스크롤해도 상단 메뉴 바로 아래에 붙어 있는 색인. 좁은 화면에서는 한 줄로 두고 옆으로 민다 */}
+      {/* 스크롤해도 상단 메뉴 바로 아래에 붙어 있는 색인 줄. 좁은 화면에서는 색인만 옆으로 밀고, 맨 위로 버튼은 오른쪽에 고정한다 */}
       {groups.length > 0 && (
-        <nav
-          ref={indexRef}
-          aria-label="첫 글자 색인"
-          className="sticky top-14 z-20 -mx-4 mt-2 flex h-11 items-center gap-1 overflow-x-auto border-b bg-background/95 px-4 backdrop-blur-sm [scrollbar-width:none] sm:-mx-1 sm:px-1"
-        >
-          {groups.map((g) => (
-            <a
-              key={g.initial}
-              href={`#initial-${g.initial}`}
-              aria-current={activeInitial === g.initial ? "location" : undefined}
-              className={cn(
-                "grid h-8 min-w-8 shrink-0 place-items-center rounded-md px-1.5 text-sm font-semibold transition-colors",
-                activeInitial === g.initial
-                  ? "bg-foreground text-background"
-                  : "text-muted-foreground hover:bg-card hover:text-foreground",
-              )}
-            >
-              {g.initial}
-            </a>
-          ))}
-        </nav>
+        <div className="sticky top-14 z-20 -mx-4 mt-2 flex h-11 items-center border-b bg-background/95 pr-4 backdrop-blur-sm sm:-mx-1 sm:pr-1">
+          <nav
+            ref={indexRef}
+            aria-label="첫 글자 색인"
+            className="flex h-full min-w-0 flex-1 items-center gap-1 overflow-x-auto pl-4 [scrollbar-width:none] sm:pl-1"
+          >
+            {groups.map((g) => (
+              <a
+                key={g.initial}
+                href={`#initial-${g.initial}`}
+                aria-current={activeInitial === g.initial ? "location" : undefined}
+                className={cn(
+                  "grid h-8 min-w-8 shrink-0 place-items-center rounded-md px-1.5 text-sm font-semibold transition-colors",
+                  activeInitial === g.initial
+                    ? "bg-foreground text-background"
+                    : "text-muted-foreground hover:bg-card hover:text-foreground",
+                )}
+              >
+                {g.initial}
+              </a>
+            ))}
+          </nav>
+          <button
+            type="button"
+            onClick={scrollToTop}
+            className="ml-1 inline-flex h-8 shrink-0 items-center gap-1 rounded-md border-l pr-1.5 pl-2.5 text-sm font-semibold text-muted-foreground transition-colors hover:bg-card hover:text-foreground"
+          >
+            <ArrowUp aria-hidden className="size-4" />
+            <span className="max-sm:sr-only">맨 위로</span>
+          </button>
+        </div>
       )}
 
       {groups.length === 0 ? (
