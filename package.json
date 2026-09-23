@@ -6,7 +6,9 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "index-terms": "node --env-file=.env.local scripts/index-terms.mjs",
+    "search-test": "node --env-file=.env.local scripts/search-test.mjs"
   },
   "dependencies": {
     "@base-ui/react": "^1.8.0",
