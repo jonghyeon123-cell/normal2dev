@@ -1,6 +1,7 @@
 "use client";
 
 import { ChevronRight } from "lucide-react";
+import Link from "next/link";
 import { MarkSwatch } from "@/components/n2d/marks";
 import { CategoryLabel, TermEn } from "@/components/n2d/parts";
 import { SaveButton } from "@/components/n2d/save-button";
@@ -108,6 +109,12 @@ function TermCard({ term }: { term: Term }) {
             </div>
           )}
         </dl>
+        <Link
+          href={`/terms/${term.id}`}
+          className="mt-3 ml-3 inline-block text-sm font-semibold text-primary underline-offset-4 hover:underline"
+        >
+          사전에서 자세히 보기
+        </Link>
       </details>
     </article>
   );
