@@ -57,6 +57,7 @@ async function main() {
     definition: t.definition,
     analogy: t.analogy,
     prompt_phrase: t.prompt_phrase,
+    prompt_points: t.prompt_points,
     related: t.related,
     confusable: t.confusable,
     updated_at: new Date().toISOString(),

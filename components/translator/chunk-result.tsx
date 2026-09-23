@@ -22,7 +22,7 @@ export function ChunkResultGroup({
   const selected = chunk.results.find((r) => r.term.id === selectedId) ?? chunk.results[0];
 
   return (
-    <li className="py-4 first:pt-0 last:pb-0">
+    <li>
       <p className="flex items-start gap-2 text-sm text-muted-foreground">
         <MarkSwatch index={index} className="mt-[4px]" />
         <span className="min-w-0">{chunk.text}</span>
@@ -38,7 +38,9 @@ export function ChunkResultGroup({
       ) : (
         <>
           {chunk.status === "uncertain" && (
-            <p className="mt-1.5 text-xs text-muted-foreground">딱 맞는 용어가 아닐 수 있어요. 가장 가까운 것을 골라 주세요.</p>
+            <p className="mt-1.5 text-xs text-muted-foreground">
+              딱 맞는 용어가 아닐 수 있어요. 가장 가까운 것을 골라 주세요.
+            </p>
           )}
           {/* key 로 용어가 바뀌면 카드를 새로 그려서 열려 있던 '더 알아보기'를 접는다 */}
           <TermCard key={selected.term.id} term={selected.term} />
@@ -92,8 +94,7 @@ function TermCard({ term }: { term: Term }) {
 
       <details className="group mt-2">
         <summary className="inline-flex cursor-pointer list-none items-center gap-1 rounded-md py-0.5 text-sm text-muted-foreground transition-colors hover:text-foreground [&::-webkit-details-marker]:hidden">
-          <ChevronRight aria-hidden className="size-4 transition-transform group-open:rotate-90" />
-          더 알아보기
+          <ChevronRight aria-hidden className="size-4 transition-transform group-open:rotate-90" />더 알아보기
         </summary>
         <dl className="mt-2 space-y-3 border-l-2 pl-3 text-sm leading-6">
           <div>

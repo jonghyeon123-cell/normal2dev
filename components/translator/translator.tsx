@@ -9,6 +9,7 @@ import { MAX_QUERY_LENGTH } from "@/lib/search/config";
 import type { ApiError, ChunkResult, SearchResponse } from "@/lib/search/types";
 import { cn } from "@/lib/utils";
 import { ChunkResultGroup } from "./chunk-result";
+import { PromptPanel } from "./prompt-panel";
 
 const EXAMPLES = [
   "버튼 누르면 작은 창 뜨고, 저장되면 잠깐 알려줘",
@@ -23,7 +24,7 @@ type State =
   | { kind: "success"; data: SearchResponse }
   | { kind: "error"; message: string };
 
-/** 조각 순서 → 고른 용어 id. 5-4 단계에서 프롬프트 재료가 된다 */
+/** 조각 순서 → 고른 용어 id. 프롬프트에 들어갈 용어를 정한다 */
 type Selection = Record<number, string>;
 
 const NETWORK_ERROR = "서버에 연결하지 못했어요. 인터넷 연결을 확인하고 다시 시도해 주세요.";
@@ -44,6 +45,8 @@ export function Translator() {
   const [state, setState] = useState<State>({ kind: "idle" });
   const [selection, setSelection] = useState<Selection>({});
   const [scrollTop, setScrollTop] = useState(0);
+  // 번역할 때마다 늘어나는 번호. 프롬프트 패널을 새로 시작하는 데 쓴다.
+  const [searchId, setSearchId] = useState(0);
   const abortRef = useRef<AbortController | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -71,6 +74,7 @@ export function Translator() {
         return;
       }
       setSelection(defaultSelection(body.chunks));
+      setSearchId((id) => id + 1);
       setState({ kind: "success", data: body });
     } catch (e) {
       if (controller.signal.aborted) return;
@@ -92,92 +96,108 @@ export function Translator() {
   }
 
   return (
-    <div className="grid gap-3 md:grid-cols-[1fr_auto_1fr] md:items-start">
-      <Panel
-        label={<label htmlFor="normal-input">평소 말</label>}
-        actions={
-          <span className="text-xs text-faint tabular-nums">
-            {text.length} / {MAX_QUERY_LENGTH}
-          </span>
-        }
-      >
-        <form
-          onSubmit={(e) => {
-            e.preventDefault();
-            void translate(text);
-          }}
-          className="flex h-full flex-col"
+    <div className="space-y-3">
+      <div className="grid gap-3 md:grid-cols-[1fr_auto_1fr] md:items-start">
+        <Panel
+          label={<label htmlFor="normal-input">평소 말</label>}
+          actions={
+            <span className="text-xs text-faint tabular-nums">
+              {text.length} / {MAX_QUERY_LENGTH}
+            </span>
+          }
         >
-          <div className="relative">
-            {highlightChunks && <HighlightLayer text={text} chunks={highlightChunks} scrollTop={scrollTop} />}
-            <textarea
-              id="normal-input"
-              ref={textareaRef}
-              value={text}
-              onChange={(e) => setText(e.target.value)}
-              onScroll={(e) => setScrollTop(e.currentTarget.scrollTop)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) {
-                  e.preventDefault();
-                  void translate(text);
-                }
-              }}
-              maxLength={MAX_QUERY_LENGTH}
-              spellCheck={false}
-              rows={4}
-              placeholder="예) 버튼 누르면 작은 창 뜨고, 저장되면 잠깐 알려줘"
-              className={cn(
-                "field-sizing-content relative block max-h-80 min-h-32 w-full resize-none bg-transparent outline-none placeholder:text-faint",
-                TEXT_STYLE,
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              void translate(text);
+            }}
+            className="flex h-full flex-col"
+          >
+            <div className="relative">
+              {highlightChunks && <HighlightLayer text={text} chunks={highlightChunks} scrollTop={scrollTop} />}
+              <textarea
+                id="normal-input"
+                ref={textareaRef}
+                value={text}
+                onChange={(e) => setText(e.target.value)}
+                onScroll={(e) => setScrollTop(e.currentTarget.scrollTop)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) {
+                    e.preventDefault();
+                    void translate(text);
+                  }
+                }}
+                maxLength={MAX_QUERY_LENGTH}
+                spellCheck={false}
+                rows={4}
+                placeholder="예) 버튼 누르면 작은 창 뜨고, 저장되면 잠깐 알려줘"
+                className={cn(
+                  "field-sizing-content relative block max-h-80 min-h-32 w-full resize-none bg-transparent outline-none placeholder:text-faint",
+                  TEXT_STYLE,
+                )}
+              />
+              {text && (
+                <button
+                  type="button"
+                  onClick={clear}
+                  className="absolute top-1.5 right-0 z-10 grid size-7 place-items-center rounded-full text-faint transition-colors hover:bg-secondary hover:text-foreground"
+                >
+                  <X aria-hidden className="size-4" />
+                  <span className="sr-only">입력 지우기</span>
+                </button>
               )}
-            />
-            {text && (
-              <button
-                type="button"
-                onClick={clear}
-                className="absolute top-1.5 right-0 z-10 grid size-7 place-items-center rounded-full text-faint transition-colors hover:bg-secondary hover:text-foreground"
+            </div>
+
+            <div className="mt-auto flex items-center justify-between gap-3 pt-4">
+              <span className="hidden text-xs text-faint sm:inline">Ctrl + Enter로도 번역할 수 있어요</span>
+              <Button
+                type="submit"
+                size="lg"
+                className="ml-auto rounded-full px-5"
+                disabled={!text.trim() || isLoading}
               >
-                <X aria-hidden className="size-4" />
-                <span className="sr-only">입력 지우기</span>
-              </button>
-            )}
-          </div>
+                {isLoading ? "번역 중…" : "번역하기"}
+              </Button>
+            </div>
+          </form>
+        </Panel>
 
-          <div className="mt-auto flex items-center justify-between gap-3 pt-4">
-            <span className="hidden text-xs text-faint sm:inline">Ctrl + Enter로도 번역할 수 있어요</span>
-            <Button type="submit" size="lg" className="ml-auto rounded-full px-5" disabled={!text.trim() || isLoading}>
-              {isLoading ? "번역 중…" : "번역하기"}
-            </Button>
-          </div>
-        </form>
-      </Panel>
+        <div className="flex items-center justify-center md:mt-[108px]">
+          <span className="grid size-10 place-items-center rounded-full border bg-card text-muted-foreground">
+            <ArrowRight aria-hidden className="hidden size-[18px] md:block" />
+            <ArrowDown aria-hidden className="size-[18px] md:hidden" />
+          </span>
+        </div>
 
-      <div className="flex items-center justify-center md:mt-[108px]">
-        <span className="grid size-10 place-items-center rounded-full border bg-card text-muted-foreground">
-          <ArrowRight aria-hidden className="hidden size-[18px] md:block" />
-          <ArrowDown aria-hidden className="size-[18px] md:hidden" />
-        </span>
-      </div>
-
-      <Panel label="개발 용어">
         <div aria-live="polite" aria-busy={isLoading}>
           {state.kind === "success" ? (
-            <ul className="divide-y">
-              {state.data.chunks.map((chunk, i) => (
-                <ChunkResultGroup
-                  key={`${i}-${chunk.text}`}
-                  chunk={chunk}
-                  index={i}
-                  selectedId={selection[i]}
-                  onSelect={(termId) => setSelection((prev) => ({ ...prev, [i]: termId }))}
-                />
-              ))}
-            </ul>
+            <PromptPanel key={searchId} chunks={state.data.chunks} selection={selection} />
           ) : (
-            <StatusArea state={state} onExample={runExample} onRetry={() => void translate(text)} />
+            <Panel label="프롬프트">
+              <StatusArea state={state} onExample={runExample} onRetry={() => void translate(text)} />
+            </Panel>
           )}
         </div>
-      </Panel>
+      </div>
+
+      {state.kind === "success" && (
+        <Panel label="개발 용어">
+          <p className="-mt-1 mb-4 text-sm text-muted-foreground">
+            프롬프트에 쓰인 용어예요. 후보를 누르면 다른 용어로 바꿀 수 있어요.
+          </p>
+          <ul className="grid gap-x-6 gap-y-6 md:grid-cols-2">
+            {state.data.chunks.map((chunk, i) => (
+              <ChunkResultGroup
+                key={`${i}-${chunk.text}`}
+                chunk={chunk}
+                index={i}
+                selectedId={selection[i]}
+                onSelect={(termId) => setSelection((prev) => ({ ...prev, [i]: termId }))}
+              />
+            ))}
+          </ul>
+        </Panel>
+      )}
     </div>
   );
 }
@@ -221,7 +241,7 @@ function StatusArea({
   if (state.kind === "idle") {
     return (
       <div>
-        <p className="text-muted-foreground">만들고 싶은 기능을 적고 번역하기를 누르면 여기에 개발 용어가 나와요.</p>
+        <p className="text-muted-foreground">만들고 싶은 기능을 적고 번역하기를 누르면 여기에 프롬프트가 나와요.</p>
         <p className="mt-6 text-xs font-semibold text-muted-foreground">예시로 해 보기</p>
         <ul className="mt-2 flex flex-col items-start gap-2">
           {EXAMPLES.map((example) => (
@@ -242,18 +262,10 @@ function StatusArea({
 
   if (state.kind === "loading") {
     return (
-      <ul className="-my-2 divide-y" aria-label="번역 중">
-        {[0, 1].map((i) => (
-          <li key={i} className="py-4">
-            <div className="h-3.5 w-1/2 animate-pulse rounded bg-secondary" />
-            <div className="mt-3 space-y-2 rounded-xl border px-4 py-3.5">
-              <div className="h-5 w-1/3 animate-pulse rounded bg-secondary" />
-              <div className="h-3.5 w-full animate-pulse rounded bg-secondary" />
-              <div className="h-3.5 w-4/5 animate-pulse rounded bg-secondary" />
-            </div>
-          </li>
-        ))}
-      </ul>
+      <div className="space-y-4 pt-2" aria-label="번역 중">
+        <div className="h-5 w-11/12 animate-pulse rounded bg-secondary" />
+        <div className="h-5 w-3/4 animate-pulse rounded bg-secondary" />
+      </div>
     );
   }
 

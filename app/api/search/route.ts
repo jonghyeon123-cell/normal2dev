@@ -27,7 +27,7 @@ const bodySchema = z.object({
 type Match = { term_id: string; similarity: number; matched_content: string; matched_kind: MatchKind };
 
 const TERM_COLUMNS =
-  "id, term, term_en, category, subcategory, definition, analogy, prompt_phrase, related, confusable";
+  "id, term, term_en, category, subcategory, definition, analogy, prompt_phrase, prompt_points, related, confusable";
 
 // 같은 조각은 1시간 동안 다시 계산하지 않는다 (Voyage 크레딧 절약).
 const chunkCache = createTtlCache<ChunkResult>(1000, 60 * 60 * 1000);

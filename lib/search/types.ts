@@ -8,7 +8,10 @@ export type Term = {
   subcategory: string;
   definition: string;
   analogy: string;
+  /** 구체적인 상황이 담긴 요청 예문. 용어 사전에서 예시로 보여준다 */
   prompt_phrase: string;
+  /** 어떤 상황에도 맞는 구현 체크포인트. 프롬프트 조립에 쓴다 */
+  prompt_points: string[];
   related: string[];
   confusable: string | null;
 };
